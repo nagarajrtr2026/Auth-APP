@@ -34,7 +34,7 @@ if (!extension_loaded('mongodb')) {
 }
 
 try {
-    $client = new MongoDB\Client(MONGO_URI);
+    $client = new MongoDB\Client(mongo_connection_string());
     $db = $client->selectDatabase(MONGO_DB_NAME);
     $collectionName = MONGO_COLLECTION_PROFILES;
 

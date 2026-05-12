@@ -8,6 +8,35 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
+// Optional project root .env (KEY=value). Does not override existing server env vars.
+$__envFile = dirname(__DIR__) . DIRECTORY_SEPARATOR . '.env';
+if (is_readable($__envFile)) {
+    foreach (file($__envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [] as $__line) {
+        $__line = trim($__line);
+        if ($__line === '' || str_starts_with($__line, '#')) {
+            continue;
+        }
+        if (!str_contains($__line, '=')) {
+            continue;
+        }
+        [$__k, $__v] = explode('=', $__line, 2);
+        $__k = trim($__k);
+        $__v = trim($__v);
+        if ($__k === '') {
+            continue;
+        }
+        if ($__v !== '' && (($__v[0] === '"' && str_ends_with($__v, '"')) || ($__v[0] === "'" && str_ends_with($__v, "'")))) {
+            $__v = substr($__v, 1, -1);
+        }
+        if (getenv($__k) !== false) {
+            continue;
+        }
+        putenv($__k . '=' . $__v);
+        $_ENV[$__k] = $__v;
+    }
+}
+unset($__envFile, $__line, $__k, $__v);
+
 // -----------------------------
 // MYSQL CONFIG
 // -----------------------------
@@ -18,12 +47,81 @@ define('MYSQL_USER', getenv('MYSQL_USER') ?: 'root');
 define('MYSQL_PASS', getenv('MYSQL_PASS') ?: '');
 
 // -----------------------------
-// MONGODB CONFIG — local mongod (connect Compass with mongodb://127.0.0.1:27017)
-// Override with MONGO_URI / MONGO_DB_NAME env if needed.
+// MONGODB CONFIG — Atlas for deployment (mongodb+srv). Local dev: set MONGO_URI in .env
+// to mongodb://127.0.0.1:27017 or use Atlas. Prefer secrets in .env (see .env.example).
 // -----------------------------
-define('MONGO_URI', getenv('MONGO_URI') ?: 'mongodb://127.0.0.1:27017');
+define(
+    'MONGO_URI',
+    getenv('MONGO_URI') ?: 'mongodb+srv://manivasgam15_db_user:dgSMRDDppHMlWuXM@cluster0.bi2vawe.mongodb.net/'
+);
 define('MONGO_DB_NAME', getenv('MONGO_DB_NAME') ?: 'mt_auth');
 define('MONGO_COLLECTION_PROFILES', 'profiles');
+
+/**
+ * Build MongoDB URI for Atlas / TLS: CA bundle + OCSP workaround (common on Windows/XAMPP).
+ * Set MONGO_TLS_STRICT=1 in the environment to skip OCSP relaxation.
+ */
+function mongo_connection_string(): string
+{
+    $uri = MONGO_URI;
+
+    $needsCa = str_starts_with($uri, 'mongodb+srv://')
+        || (str_starts_with($uri, 'mongodb://') && str_contains($uri, '.mongodb.net'));
+
+    if (! $needsCa) {
+        return $uri;
+    }
+
+    $append = [];
+
+    if (! str_contains($uri, 'retryWrites=')) {
+        $append['retryWrites'] = 'true';
+    }
+    if (! str_contains($uri, 'w=') && ! str_contains($uri, 'w%3D')) {
+        $append['w'] = 'majority';
+    }
+
+    if (getenv('MONGO_TLS_STRICT') !== '1') {
+        if (! str_contains($uri, 'tlsDisableOCSPEndpointCheck=')) {
+            $append['tlsDisableOCSPEndpointCheck'] = 'true';
+        }
+    }
+
+    if (! str_contains($uri, 'tlsCAFile=')) {
+        $candidates = [];
+        $envCa = getenv('MONGO_TLS_CAFILE');
+        if (is_string($envCa) && $envCa !== '') {
+            $candidates[] = $envCa;
+        }
+        $iniCa = ini_get('openssl.cafile');
+        if (is_string($iniCa) && $iniCa !== '') {
+            $candidates[] = $iniCa;
+        }
+        $candidates[] = __DIR__ . DIRECTORY_SEPARATOR . 'certs' . DIRECTORY_SEPARATOR . 'cacert.pem';
+
+        foreach ($candidates as $path) {
+            if ($path !== '' && is_readable($path)) {
+                $append['tlsCAFile'] = str_replace('\\', '/', $path);
+                break;
+            }
+        }
+    }
+
+    if ($append === []) {
+        return $uri;
+    }
+
+    $qs = http_build_query($append, '', '&', PHP_QUERY_RFC3986);
+    $sep = str_contains($uri, '?') ? '&' : '?';
+
+    return $uri . $sep . $qs;
+}
+
+/** Mask password for logs / JSON (never expose Atlas credentials in API output). */
+function mongo_uri_public_display(): string
+{
+    return preg_replace('#//([^:]+):[^@]+@#', '//***:***@', MONGO_URI);
+}
 
 // -----------------------------
 // REDIS CONFIG (OPTIONAL)
@@ -102,7 +200,7 @@ function db_mongo_profiles(): object
         );
     }
 
-    $client = new \MongoDB\Client(MONGO_URI);
+    $client = new \MongoDB\Client(mongo_connection_string());
 
     return $client
         ->selectDatabase(MONGO_DB_NAME)

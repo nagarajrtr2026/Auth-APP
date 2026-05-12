@@ -50,25 +50,38 @@ try {
     $userId = (int) $mysqli->insert_id;
     $stmt->close();
 
-    // MongoDB profile document (defaults)
-    $profiles = db_mongo_profiles();
-    $profiles->insertOne([
-        'user_id' => $userId,
-        'tenant_id' => $tenantId,
-        'age' => null,
-        'dob' => null,
-        'contact' => null,
-        'bio' => null,
-    ]);
+    // MongoDB profile stub (optional at signup). If Atlas/local Mongo is down, account still works;
+    // profile.php will upsert the document when Mongo is reachable.
+    $profileSynced = true;
+    try {
+        $profiles = db_mongo_profiles();
+        $profiles->insertOne([
+            'user_id' => $userId,
+            'tenant_id' => $tenantId,
+            'age' => null,
+            'dob' => null,
+            'contact' => null,
+            'bio' => null,
+        ]);
+    } catch (Throwable) {
+        $profileSynced = false;
+    }
+
+    $mysqli->close();
+
+    $msg = $profileSynced
+        ? 'Registration successful. You can sign in now.'
+        : 'Registration successful. You can sign in now. (Extended profile will sync when the profile database is available.)';
 
     json_response([
         'success' => true,
-        'message' => 'Registration successful. You can sign in now.',
+        'message' => $msg,
+        'profile_synced' => $profileSynced,
         'user' => ['id' => $userId, 'name' => $name, 'email' => $email, 'tenant_id' => $tenantId],
     ]);
 } catch (mysqli_sql_exception $e) {
     if ($e->getCode() === 1062) {
-        json_response(['success' => false, 'message' => 'An account with this email already exists for this tenant.'], 409);
+        json_response(['success' => false, 'message' => 'An account with this email already exists for this tenant. Use another email or sign in.'], 409);
     }
     json_response(['success' => false, 'message' => 'Database error. Please try again.'], 500);
 } catch (Throwable $e) {

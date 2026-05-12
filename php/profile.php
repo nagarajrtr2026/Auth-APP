@@ -75,24 +75,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             json_response(['success' => false, 'message' => 'User not found.'], 404);
         }
 
-        $profiles = db_mongo_profiles();
-        $profileDoc = $profiles->findOne([
-            'user_id' => $userId,
-            'tenant_id' => $tenantId,
-        ]);
-
         $profile = [
             'age' => null,
             'dob' => null,
             'contact' => null,
             'bio' => null,
         ];
-        if ($profileDoc !== null) {
-            $arr = json_decode(json_encode($profileDoc), true) ?: [];
-            $profile['age'] = $arr['age'] ?? null;
-            $profile['dob'] = $arr['dob'] ?? null;
-            $profile['contact'] = $arr['contact'] ?? null;
-            $profile['bio'] = $arr['bio'] ?? null;
+        try {
+            $profiles = db_mongo_profiles();
+            $profileDoc = $profiles->findOne([
+                'user_id' => $userId,
+                'tenant_id' => $tenantId,
+            ]);
+            if ($profileDoc !== null) {
+                $arr = json_decode(json_encode($profileDoc), true) ?: [];
+                $profile['age'] = $arr['age'] ?? null;
+                $profile['dob'] = $arr['dob'] ?? null;
+                $profile['contact'] = $arr['contact'] ?? null;
+                $profile['bio'] = $arr['bio'] ?? null;
+            }
+        } catch (Throwable) {
+            // MongoDB unavailable — return MySQL user + empty profile fields
         }
 
         json_response([
@@ -174,56 +177,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             session_store_set($token, $payload);
         }
 
-        $profiles = db_mongo_profiles();
-        $updateDoc = [];
-        if ($age !== null) {
-            $updateDoc['age'] = $age === '' ? null : (int) $age;
-        }
-        if ($dob !== null) {
-            $updateDoc['dob'] = $dob === '' ? null : $dob;
-        }
-        if ($contact !== null) {
-            $updateDoc['contact'] = $contact === '' ? null : $contact;
-        }
-        if ($bio !== null) {
-            $updateDoc['bio'] = $bio === '' ? null : $bio;
-        }
-
-        if ($updateDoc !== []) {
-            // Upsert ensures MongoDB profile exists even if registration missed inserting it.
-            $profiles->updateOne(
-                ['user_id' => $userId, 'tenant_id' => $tenantId],
-                [
-                    '$set' => $updateDoc,
-                    '$setOnInsert' => [
-                        'user_id' => $userId,
-                        'tenant_id' => $tenantId,
-                    ],
-                ],
-                ['upsert' => true]
-            );
-        }
-
-        // Refresh merged response
         $stmt = $mysqli->prepare('SELECT id, tenant_id, name, email, created_at FROM users WHERE id = ? AND tenant_id = ? LIMIT 1');
         $stmt->bind_param('is', $userId, $tenantId);
         $stmt->execute();
         $userRow = $stmt->get_result()->fetch_assoc();
         $stmt->close();
 
-        $profileDoc = $profiles->findOne(['user_id' => $userId, 'tenant_id' => $tenantId]);
         $profile = ['age' => null, 'dob' => null, 'contact' => null, 'bio' => null];
-        if ($profileDoc !== null) {
-            $arr = json_decode(json_encode($profileDoc), true) ?: [];
-            $profile['age'] = $arr['age'] ?? null;
-            $profile['dob'] = $arr['dob'] ?? null;
-            $profile['contact'] = $arr['contact'] ?? null;
-            $profile['bio'] = $arr['bio'] ?? null;
+        $mongoNote = '';
+        try {
+            $profiles = db_mongo_profiles();
+            $updateDoc = [];
+            if ($age !== null) {
+                $updateDoc['age'] = $age === '' ? null : (int) $age;
+            }
+            if ($dob !== null) {
+                $updateDoc['dob'] = $dob === '' ? null : $dob;
+            }
+            if ($contact !== null) {
+                $updateDoc['contact'] = $contact === '' ? null : $contact;
+            }
+            if ($bio !== null) {
+                $updateDoc['bio'] = $bio === '' ? null : $bio;
+            }
+
+            if ($updateDoc !== []) {
+                $profiles->updateOne(
+                    ['user_id' => $userId, 'tenant_id' => $tenantId],
+                    [
+                        '$set' => $updateDoc,
+                        '$setOnInsert' => [
+                            'user_id' => $userId,
+                            'tenant_id' => $tenantId,
+                        ],
+                    ],
+                    ['upsert' => true]
+                );
+            }
+
+            $profileDoc = $profiles->findOne(['user_id' => $userId, 'tenant_id' => $tenantId]);
+            if ($profileDoc !== null) {
+                $arr = json_decode(json_encode($profileDoc), true) ?: [];
+                $profile['age'] = $arr['age'] ?? null;
+                $profile['dob'] = $arr['dob'] ?? null;
+                $profile['contact'] = $arr['contact'] ?? null;
+                $profile['bio'] = $arr['bio'] ?? null;
+            }
+        } catch (Throwable) {
+            $mongoNote = ' Account changes saved; extended profile could not be stored (MongoDB unavailable).';
         }
 
         json_response([
             'success' => true,
-            'message' => 'Profile updated.',
+            'message' => 'Profile updated.' . $mongoNote,
             'user' => [
                 'id' => (int) $userRow['id'],
                 'tenant_id' => $userRow['tenant_id'],

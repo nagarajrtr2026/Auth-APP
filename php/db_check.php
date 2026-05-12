@@ -19,7 +19,10 @@ $mongo = [
     'database' => MONGO_DB_NAME,
     'collection' => MONGO_COLLECTION_PROFILES,
     'php_extension_mongodb' => $mongoExt,
-    'uri' => MONGO_URI,
+    'uri' => mongo_uri_public_display(),
+    'tls' => str_contains(MONGO_URI, 'mongodb+srv://')
+        ? 'Atlas: tlsCAFile + tlsDisableOCSPEndpointCheck (unless MONGO_TLS_STRICT=1). Set MONGO_TLS_CAFILE to override CA path.'
+        : 'Direct / local connection.',
 ];
 $redis = ['status' => 'unknown'];
 
@@ -45,7 +48,11 @@ if (!$mongoExt) {
         $mongo['profiles_document_count_estimate'] = $count;
     } catch (Throwable $e) {
         $mongo['message'] = $e->getMessage();
-        $mongo['hint'] = 'Ensure MongoDB is running (mongod on port 27017), firewall allows localhost, and MONGO_URI in config/env is correct.';
+        if (str_contains(MONGO_URI, 'mongodb+srv://') || str_contains(MONGO_URI, '.mongodb.net')) {
+            $mongo['hint'] = 'Atlas: open Network Access and allow your IP (or 0.0.0.0/0 for dev). TLS "internal error" during hello usually means Atlas closed the socket before auth—often IP allowlist or VPN/proxy. Verify user/password under Database Access. See https://www.mongodb.com/docs/atlas/troubleshoot-connection/';
+        } else {
+            $mongo['hint'] = 'Ensure mongod is running on the host in MONGO_URI, firewall allows the port, and MONGO_URI in config/env is correct.';
+        }
     }
 }
 
