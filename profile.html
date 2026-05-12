@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Profile — MT Auth</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --bg0: #020617;
+      --bg1: #0f172a;
+      --accent: #38bdf8;
+      --accent2: #a78bfa;
+      --border: rgba(255, 255, 255, 0.12);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: radial-gradient(1000px 700px at 50% -10%, #312e81 0%, transparent 55%),
+                  radial-gradient(900px 600px at 100% 100%, #0e7490 0%, transparent 50%),
+                  linear-gradient(165deg, var(--bg0), var(--bg1));
+    }
+    .cursor-glow {
+      position: fixed;
+      width: 500px;
+      height: 500px;
+      border-radius: 50%;
+      pointer-events: none;
+      background: radial-gradient(circle, rgba(56, 189, 248, 0.18), transparent 70%);
+      transform: translate(-50%, -50%);
+      z-index: 0;
+    }
+    .shell {
+      position: relative;
+      z-index: 1;
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 2.5rem 1.25rem 3rem;
+    }
+    .hero-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1.75rem;
+      animation: fadeDown 0.6s ease both;
+    }
+    @keyframes fadeDown {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .hero-bar h1 {
+      font-size: clamp(1.45rem, 3vw, 1.85rem);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin: 0;
+      background: linear-gradient(120deg, #f8fafc, #bae6fd);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .hero-bar small { color: var(--muted); display: block; margin-top: 0.25rem; }
+    .btn-logout {
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.55);
+      color: var(--text);
+      padding: 0.55rem 1.1rem;
+      font-weight: 600;
+      transition: border-color 0.2s ease, background 0.2s ease;
+    }
+    .btn-logout:hover {
+      border-color: rgba(248, 113, 113, 0.45);
+      background: rgba(127, 29, 29, 0.35);
+      color: #fecaca;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.25rem;
+    }
+    .glass {
+      border-radius: 22px;
+      padding: 1.75rem 1.5rem;
+      border: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.55);
+      backdrop-filter: blur(18px) saturate(150%);
+      -webkit-backdrop-filter: blur(18px) saturate(150%);
+      box-shadow: 0 22px 70px rgba(0, 0, 0, 0.45);
+      animation: cardUp 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+    .glass:nth-child(2) { animation-delay: 0.08s; }
+    @keyframes cardUp {
+      from { opacity: 0; transform: translateY(18px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .glass h2 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      letter-spacing: -0.02em;
+    }
+    .form-label {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--muted);
+    }
+    .form-control, .form-select, textarea.form-control {
+      border-radius: 12px;
+      background: rgba(2, 6, 23, 0.55) !important;
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      color: var(--text) !important;
+    }
+    textarea.form-control { min-height: 110px; resize: vertical; }
+    .form-control:focus {
+      border-color: rgba(56, 189, 248, 0.55);
+      box-shadow: 0 0 0 0.15rem rgba(56, 189, 248, 0.15);
+    }
+    .btn-save {
+      border: none;
+      border-radius: 14px;
+      padding: 0.65rem 1.35rem;
+      font-weight: 600;
+      color: #0f172a;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      box-shadow: 0 14px 45px rgba(56, 189, 248, 0.35);
+      transition: transform 0.2s ease;
+    }
+    .btn-save:hover { transform: translateY(-2px); color: #0f172a; }
+    .meta-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.25rem 0.65rem;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      background: rgba(2, 6, 23, 0.45);
+    }
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 2000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(2, 6, 23, 0.65);
+      backdrop-filter: blur(4px);
+    }
+    .loading-overlay.show { display: flex; }
+    .spinner-ring {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: 3px solid rgba(148, 163, 184, 0.25);
+      border-top-color: var(--accent);
+      animation: spin 0.75s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .toast-host {
+      position: fixed;
+      bottom: 1rem;
+      right: 1rem;
+      z-index: 2100;
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+      max-width: min(420px, calc(100vw - 2rem));
+    }
+    .toast-custom {
+      padding: 0.8rem 1rem;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.96);
+      box-shadow: 0 16px 45px rgba(0, 0, 0, 0.45);
+      animation: tIn 0.35s ease both;
+      font-size: 0.9rem;
+    }
+    .toast-custom.good { border-color: rgba(74, 222, 128, 0.45); }
+    .toast-custom.bad { border-color: rgba(248, 113, 113, 0.45); }
+    @keyframes tIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .page-body { animation: bodyIn 0.55s ease both; }
+    @keyframes bodyIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+  </style>
+</head>
+<body class="page-body">
+  <div class="cursor-glow" id="cursorGlow"></div>
+  <div class="loading-overlay" id="loadingOverlay"><div class="spinner-ring"></div></div>
+  <div class="toast-host" id="toastHost"></div>
+
+  <div class="shell">
+    <div class="hero-bar">
+      <div>
+        <span class="meta-pill">Authenticated</span>
+        <h1>Profile workspace</h1>
+        <small>Account data from MySQL · Extended fields from MongoDB · Token in Redis</small>
+      </div>
+      <div class="d-flex gap-2">
+        <a href="login.html" class="btn btn-logout text-decoration-none">← Login</a>
+        <button type="button" class="btn-logout" id="btnLogout">Sign out</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <section class="glass">
+        <h2>Account</h2>
+        <form id="formAccount" novalidate>
+          <div class="mb-3">
+            <label class="form-label" for="pfName">Display name</label>
+            <input type="text" class="form-control" id="pfName" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="pfEmail">Email</label>
+            <input type="email" class="form-control" id="pfEmail" required>
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Tenant</label>
+            <input type="text" class="form-control" id="pfTenant" readonly>
+          </div>
+          <div class="mb-0">
+            <label class="form-label">User ID</label>
+            <input type="text" class="form-control" id="pfId" readonly>
+          </div>
+        </form>
+      </section>
+
+      <section class="glass">
+        <h2>Profile (MongoDB)</h2>
+        <form id="formProfile" novalidate>
+          <div class="mb-3">
+            <label class="form-label" for="pfAge">Age</label>
+            <input type="number" class="form-control" id="pfAge" min="0" max="130" placeholder="Optional">
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="pfDob">Date of birth</label>
+            <input type="date" class="form-control" id="pfDob">
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="pfContact">Contact</label>
+            <input type="text" class="form-control" id="pfContact" placeholder="Phone or handle">
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="pfBio">Bio</label>
+            <textarea class="form-control" id="pfBio" placeholder="Tell your story"></textarea>
+          </div>
+          <button type="submit" class="btn-save">Save changes</button>
+        </form>
+      </section>
+    </div>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script>
+    /**
+     * Profile page — GET profile via token header; POST updates (MySQL + MongoDB).
+     * Session token stored in localStorage (no PHP sessions).
+     */
+    (function ($) {
+      var apiProfile = 'php/profile.php';
+
+      function toast(msg, ok) {
+        var c = ok ? 'good' : 'bad';
+        var $t = $('<div class="toast-custom ' + c + '"></div>').text(msg);
+        $('#toastHost').append($t);
+        setTimeout(function () { $t.fadeOut(280, function () { $(this).remove(); }); }, 4200);
+      }
+
+      function loading(on) {
+        $('#loadingOverlay').toggleClass('show', !!on);
+      }
+
+      function getToken() {
+        return localStorage.getItem('session_token');
+      }
+
+      function redirectLogin() {
+        localStorage.removeItem('session_token');
+        localStorage.removeItem('session_user');
+        window.location.href = 'login.html';
+      }
+
+      // Cursor spotlight
+      var g = document.getElementById('cursorGlow');
+      $(document).on('mousemove', function (e) {
+        g.style.left = e.clientX + 'px';
+        g.style.top = e.clientY + 'px';
+      });
+
+      $('#btnLogout').on('click', function () {
+        redirectLogin();
+      });
+
+      function fillForms(data) {
+        if (!data || !data.user) return;
+        var u = data.user;
+        var p = data.profile || {};
+        $('#pfName').val(u.name || '');
+        $('#pfEmail').val(u.email || '');
+        $('#pfTenant').val(u.tenant_id || '');
+        $('#pfId').val(u.id != null ? String(u.id) : '');
+        $('#pfAge').val(p.age != null && p.age !== '' ? p.age : '');
+        $('#pfDob').val(p.dob || '');
+        $('#pfContact').val(p.contact || '');
+        $('#pfBio').val(p.bio || '');
+      }
+
+      function loadProfile() {
+        var token = getToken();
+        if (!token) {
+          toast('Please sign in first.', false);
+          setTimeout(redirectLogin, 900);
+          return;
+        }
+        loading(true);
+        $.ajax({
+          url: apiProfile,
+          method: 'GET',
+          dataType: 'json',
+          headers: { 'X-Session-Token': token },
+          success: function (res) {
+            loading(false);
+            if (res && res.success) {
+              fillForms(res);
+              localStorage.setItem('session_user', JSON.stringify(res.user || {}));
+            } else {
+              toast((res && res.message) || 'Could not load profile.', false);
+              setTimeout(redirectLogin, 1200);
+            }
+          },
+          error: function (xhr) {
+            loading(false);
+            var msg = 'Session invalid or expired.';
+            try {
+              var j = xhr.responseJSON || JSON.parse(xhr.responseText);
+              if (j && j.message) msg = j.message;
+            } catch (e) {}
+            toast(msg, false);
+            setTimeout(redirectLogin, 1200);
+          }
+        });
+      }
+
+      // Merge account + profile save — single POST updates both stores server-side
+      $('#formProfile').on('submit', function (ev) {
+        ev.preventDefault();
+        var token = getToken();
+        if (!token) {
+          redirectLogin();
+          return;
+        }
+
+        var name = $.trim($('#pfName').val());
+        var email = $.trim($('#pfEmail').val());
+        var ageVal = $('#pfAge').val();
+        var dob = $('#pfDob').val();
+        var contact = $.trim($('#pfContact').val());
+        var bio = $.trim($('#pfBio').val());
+
+        if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          toast('Please fix name and email.', false);
+          return;
+        }
+
+        var agePayload = '';
+        if (ageVal !== '') {
+          var parsedAge = parseInt(ageVal, 10);
+          if (isNaN(parsedAge) || parsedAge < 0) {
+            toast('Age must be a valid number.', false);
+            return;
+          }
+          agePayload = parsedAge;
+        }
+
+        loading(true);
+        var payload = {
+          token: token,
+          name: name,
+          email: email,
+          age: agePayload,
+          dob: dob,
+          contact: contact,
+          bio: bio
+        };
+
+        $.ajax({
+          url: apiProfile,
+          method: 'POST',
+          contentType: 'application/json; charset=UTF-8',
+          dataType: 'json',
+          data: JSON.stringify(payload),
+          success: function (res) {
+            loading(false);
+            if (res && res.success) {
+              fillForms(res);
+              toast(res.message || 'Saved.', true);
+            } else {
+              toast((res && res.message) || 'Update failed.', false);
+            }
+          },
+          error: function (xhr) {
+            loading(false);
+            var msg = 'Could not save.';
+            try {
+              var j = xhr.responseJSON || JSON.parse(xhr.responseText);
+              if (j && j.message) msg = j.message;
+            } catch (e) {}
+            toast(msg, false);
+          }
+        });
+      });
+
+      // Prevent account form standalone submit (fields merged via profile save)
+      $('#formAccount').on('submit', function (e) {
+        e.preventDefault();
+        $('#formProfile').trigger('submit');
+      });
+
+      $(function () {
+        loadProfile();
+      });
+    })(jQuery);
+  </script>
+</body>
+</html>

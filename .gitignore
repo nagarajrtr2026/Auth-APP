@@ -1,0 +1,26 @@
+# Composer
+/vendor/
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# Logs & cache
+*.log
+*.cache
+.phpunit.result.cache
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+
+# Optional local tooling
+/node_modules/

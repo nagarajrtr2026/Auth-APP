@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In — MT Auth</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --bg0: #050814;
+      --bg1: #0b1224;
+      --accent: #38bdf8;
+      --accent2: #818cf8;
+      --glass: rgba(255, 255, 255, 0.07);
+      --border: rgba(255, 255, 255, 0.14);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --danger: #f87171;
+      --ok: #4ade80;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: radial-gradient(1000px 700px at 15% 0%, #312e81 0%, transparent 55%),
+                  radial-gradient(800px 600px at 100% 30%, #0e7490 0%, transparent 50%),
+                  linear-gradient(165deg, var(--bg0), var(--bg1));
+      overflow-x: hidden;
+    }
+    /* Cursor glow + particle canvas */
+    .cursor-glow {
+      position: fixed;
+      width: 480px;
+      height: 480px;
+      border-radius: 50%;
+      pointer-events: none;
+      background: radial-gradient(circle, rgba(129, 140, 248, 0.28), transparent 68%);
+      transform: translate(-50%, -50%);
+      z-index: 0;
+      mix-blend-mode: screen;
+      transition: opacity 0.35s ease;
+    }
+    #particleCanvas {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0.55;
+    }
+    .auth-layout {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2.5rem 1rem;
+    }
+    .glass-card {
+      width: min(100%, 920px);
+      border-radius: 28px;
+      padding: 0.35rem;
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.35), rgba(129, 140, 248, 0.2), rgba(14, 165, 233, 0.15));
+      box-shadow: 0 30px 100px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      transform-style: preserve-3d;
+      perspective: 1200px;
+      animation: cardIn 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(26px) rotateX(10deg) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) rotateX(0) scale(1); }
+    }
+    .glass-inner {
+      border-radius: 24px;
+      background: rgba(15, 23, 42, 0.55);
+      border: 1px solid var(--border);
+      backdrop-filter: blur(22px) saturate(160%);
+      -webkit-backdrop-filter: blur(22px) saturate(160%);
+      overflow: hidden;
+    }
+    .slider-tabs {
+      display: flex;
+      padding: 0.75rem;
+      gap: 0.5rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(2, 6, 23, 0.45);
+    }
+    .slider-tabs button {
+      flex: 1;
+      border: none;
+      border-radius: 14px;
+      padding: 0.75rem 1rem;
+      font-weight: 600;
+      color: var(--muted);
+      background: transparent;
+      transition: color 0.25s ease, background 0.25s ease, transform 0.2s ease;
+    }
+    .slider-tabs button.active {
+      color: #0f172a;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      box-shadow: 0 10px 35px rgba(56, 189, 248, 0.35);
+    }
+    .slider-tabs button:not(.active):hover {
+      color: var(--text);
+      background: rgba(51, 65, 85, 0.45);
+    }
+    .panels-viewport {
+      overflow: hidden;
+    }
+    .panels-track {
+      display: flex;
+      width: 200%;
+      transition: transform 0.65s cubic-bezier(0.65, 0, 0.35, 1);
+    }
+    .panels-track.show-register {
+      transform: translateX(-50%);
+    }
+    .panel-col {
+      width: 50%;
+      padding: 2rem 2.25rem 2.5rem;
+    }
+    @media (max-width: 576px) {
+      .panel-col { padding: 1.5rem 1.25rem 2rem; }
+    }
+    .panel-title {
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.35rem;
+    }
+    .panel-sub {
+      color: var(--muted);
+      font-size: 0.92rem;
+      margin-bottom: 1.5rem;
+    }
+    .form-control, .form-select {
+      background: rgba(15, 23, 42, 0.65) !important;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      color: var(--text) !important;
+      border-radius: 12px;
+      padding: 0.65rem 0.85rem;
+    }
+    .form-control:focus {
+      border-color: rgba(56, 189, 248, 0.65);
+      box-shadow: 0 0 0 0.2rem rgba(56, 189, 248, 0.15);
+    }
+    .form-label {
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+    }
+    .btn-auth {
+      border: none;
+      border-radius: 14px;
+      padding: 0.75rem 1.25rem;
+      font-weight: 600;
+      width: 100%;
+      color: #0f172a;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      box-shadow: 0 14px 40px rgba(129, 140, 248, 0.35);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .btn-auth:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 18px 50px rgba(56, 189, 248, 0.45);
+      color: #0f172a;
+    }
+    .link-muted {
+      color: var(--muted);
+      font-size: 0.9rem;
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+    .link-muted:hover { color: var(--accent); }
+    /* Loading overlay */
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 2000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(2, 6, 23, 0.65);
+      backdrop-filter: blur(4px);
+    }
+    .loading-overlay.show { display: flex; }
+    .spinner-ring {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      border: 3px solid rgba(148, 163, 184, 0.25);
+      border-top-color: var(--accent);
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    /* Toasts */
+    .toast-host {
+      position: fixed;
+      bottom: 1.25rem;
+      right: 1.25rem;
+      z-index: 2100;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      max-width: min(420px, calc(100vw - 2rem));
+    }
+    .toast-custom {
+      padding: 0.85rem 1.1rem;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.92);
+      color: var(--text);
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+      animation: toastIn 0.35s ease both;
+      font-size: 0.92rem;
+    }
+    .toast-custom.success { border-color: rgba(74, 222, 128, 0.45); }
+    .toast-custom.error { border-color: rgba(248, 113, 113, 0.5); }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .invalid-hint { font-size: 0.8rem; color: var(--danger); margin-top: 0.25rem; display: none; }
+    .page-enter { animation: pageEnter 0.55s ease both; }
+    @keyframes pageEnter {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="page-enter">
+  <canvas id="particleCanvas" aria-hidden="true"></canvas>
+  <div class="cursor-glow" id="cursorGlow"></div>
+
+  <div class="loading-overlay" id="loadingOverlay" aria-live="polite" aria-busy="false">
+    <div class="spinner-ring" role="status"></div>
+  </div>
+
+  <div class="toast-host" id="toastHost" aria-live="polite"></div>
+
+  <div class="auth-layout">
+    <div class="glass-card">
+      <div class="glass-inner">
+        <div class="slider-tabs">
+          <button type="button" id="tabLogin" class="active">Sign in</button>
+          <button type="button" id="tabRegister">Create account</button>
+        </div>
+        <div class="panels-viewport">
+          <div class="panels-track" id="panelsTrack">
+            <!-- Login -->
+            <div class="panel-col">
+              <div class="panel-title">Welcome back</div>
+              <p class="panel-sub">Enter your tenant workspace and credentials.</p>
+              <form id="formLogin" novalidate>
+                <div class="mb-3">
+                  <label class="form-label" for="loginTenant">Tenant ID</label>
+                  <input type="text" class="form-control" id="loginTenant" name="tenant_id" value="default" placeholder="e.g. default or acme-corp">
+                </div>
+                <div class="mb-3">
+                  <label class="form-label" for="loginEmail">Email</label>
+                  <input type="email" class="form-control" id="loginEmail" required autocomplete="email" placeholder="you@company.com">
+                  <div class="invalid-hint" id="loginEmailErr">Enter a valid email.</div>
+                </div>
+                <div class="mb-4">
+                  <label class="form-label" for="loginPassword">Password</label>
+                  <input type="password" class="form-control" id="loginPassword" required autocomplete="current-password" placeholder="••••••••">
+                  <div class="invalid-hint" id="loginPassErr">Password is required.</div>
+                </div>
+                <button type="submit" class="btn-auth mb-3">Sign in</button>
+                <div class="text-center">
+                  <a class="link-muted" href="register.html">Prefer a dedicated register page →</a>
+                </div>
+              </form>
+            </div>
+            <!-- Register -->
+            <div class="panel-col">
+              <div class="panel-title">Create your account</div>
+              <p class="panel-sub">Multi-tenant aware — same email can exist under different tenants.</p>
+              <form id="formRegister" novalidate>
+                <div class="mb-2">
+                  <label class="form-label" for="regTenant">Tenant ID</label>
+                  <input type="text" class="form-control" id="regTenant" value="default" placeholder="Workspace slug">
+                </div>
+                <div class="mb-2">
+                  <label class="form-label" for="regName">Full name</label>
+                  <input type="text" class="form-control" id="regName" required minlength="2" placeholder="Jane Doe">
+                  <div class="invalid-hint" id="regNameErr">Please enter your name.</div>
+                </div>
+                <div class="mb-2">
+                  <label class="form-label" for="regEmail">Email</label>
+                  <input type="email" class="form-control" id="regEmail" required placeholder="you@company.com">
+                  <div class="invalid-hint" id="regEmailErr">Valid email required.</div>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label" for="regPassword">Password</label>
+                  <input type="password" class="form-control" id="regPassword" required minlength="8" placeholder="Min. 8 characters">
+                  <div class="invalid-hint" id="regPassErr">Use at least 8 characters.</div>
+                </div>
+                <button type="submit" class="btn-auth mb-3">Register</button>
+                <div class="text-center">
+                  <a class="link-muted" href="index.html">← Back to home</a>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    /**
+     * MT Auth — Login / Register (embedded script per project spec).
+     * Uses jQuery AJAX only (no fetch). Session stored in localStorage after login.
+     */
+    (function ($) {
+      var apiLogin = 'php/login.php';
+      var apiRegister = 'php/register.php';
+
+      function showLoading(show) {
+        var el = $('#loadingOverlay');
+        if (show) {
+          el.addClass('show').attr('aria-busy', 'true');
+        } else {
+          el.removeClass('show').attr('aria-busy', 'false');
+        }
+      }
+
+      function showToast(message, type) {
+        type = type || 'success';
+        var $t = $('<div class="toast-custom ' + (type === 'error' ? 'error' : 'success') + '"></div>').text(message);
+        $('#toastHost').append($t);
+        setTimeout(function () {
+          $t.fadeOut(320, function () { $(this).remove(); });
+        }, 4200);
+      }
+
+      function validateEmail(v) {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+      }
+
+      // --- Cursor gradient ---
+      var glow = document.getElementById('cursorGlow');
+      document.addEventListener('mousemove', function (e) {
+        glow.style.left = e.clientX + 'px';
+        glow.style.top = e.clientY + 'px';
+      });
+
+      // --- Lightweight particle field (interactive drift) ---
+      (function particles() {
+        var canvas = document.getElementById('particleCanvas');
+        if (!canvas || !canvas.getContext) return;
+        var ctx = canvas.getContext('2d');
+        var dpr = window.devicePixelRatio || 1;
+        var pts = [];
+        var mx = 0, my = 0;
+
+        function resize() {
+          canvas.width = window.innerWidth * dpr;
+          canvas.height = window.innerHeight * dpr;
+          canvas.style.width = window.innerWidth + 'px';
+          canvas.style.height = window.innerHeight + 'px';
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        for (var i = 0; i < 55; i++) {
+          pts.push({
+            x: Math.random() * window.innerWidth,
+            y: Math.random() * window.innerHeight,
+            vx: (Math.random() - 0.5) * 0.35,
+            vy: (Math.random() - 0.5) * 0.35,
+            r: Math.random() * 2 + 0.5
+          });
+        }
+
+        document.addEventListener('mousemove', function (e) {
+          mx = e.clientX;
+          my = e.clientY;
+        });
+
+        function tick() {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          var w = window.innerWidth, h = window.innerHeight;
+          for (var i = 0; i < pts.length; i++) {
+            var p = pts[i];
+            var dx = mx - p.x, dy = my - p.y;
+            var dist = Math.sqrt(dx * dx + dy * dy) || 1;
+            p.vx += (dx / dist) * 0.02;
+            p.vy += (dy / dist) * 0.02;
+            p.vx *= 0.96;
+            p.vy *= 0.96;
+            p.x += p.vx;
+            p.y += p.vy;
+            if (p.x < 0 || p.x > w) p.vx *= -1;
+            if (p.y < 0 || p.y > h) p.vy *= -1;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(148, 197, 255, 0.35)';
+            ctx.fill();
+          }
+          requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+      })();
+
+      // --- Sliding panels ---
+      var $track = $('#panelsTrack');
+      var $tabLogin = $('#tabLogin');
+      var $tabReg = $('#tabRegister');
+
+      function setMode(register) {
+        if (register) {
+          $track.addClass('show-register');
+          $tabReg.addClass('active');
+          $tabLogin.removeClass('active');
+        } else {
+          $track.removeClass('show-register');
+          $tabLogin.addClass('active');
+          $tabReg.removeClass('active');
+        }
+      }
+
+      $tabLogin.on('click', function () { setMode(false); });
+      $tabReg.on('click', function () { setMode(true); });
+
+      // Deep link ?mode=register
+      if (window.location.search.indexOf('mode=register') !== -1) {
+        setMode(true);
+      }
+
+      // --- Login AJAX ---
+      $('#formLogin').on('submit', function (ev) {
+        ev.preventDefault();
+        var tenant = $.trim($('#loginTenant').val()) || 'default';
+        var email = $.trim($('#loginEmail').val());
+        var pass = $('#loginPassword').val();
+        $('#loginEmailErr').hide();
+        $('#loginPassErr').hide();
+
+        var ok = true;
+        if (!validateEmail(email)) {
+          $('#loginEmailErr').show();
+          ok = false;
+        }
+        if (!pass) {
+          $('#loginPassErr').show();
+          ok = false;
+        }
+        if (!ok) return;
+
+        showLoading(true);
+        $.ajax({
+          url: apiLogin,
+          method: 'POST',
+          contentType: 'application/json; charset=UTF-8',
+          dataType: 'json',
+          data: JSON.stringify({
+            tenant_id: tenant,
+            email: email,
+            password: pass
+          }),
+          success: function (res) {
+            showLoading(false);
+            if (res && res.success && res.token) {
+              localStorage.setItem('session_token', res.token);
+              localStorage.setItem('session_user', JSON.stringify(res.user || {}));
+              showToast(res.message || 'Signed in successfully.', 'success');
+              setTimeout(function () {
+                window.location.href = 'profile.html';
+              }, 650);
+            } else {
+              showToast((res && res.message) || 'Login failed.', 'error');
+            }
+          },
+          error: function (xhr) {
+            showLoading(false);
+            var msg = 'Unable to sign in.';
+            try {
+              var j = xhr.responseJSON || JSON.parse(xhr.responseText);
+              if (j && j.message) msg = j.message;
+            } catch (e) {}
+            showToast(msg, 'error');
+          }
+        });
+      });
+
+      // --- Register AJAX ---
+      $('#formRegister').on('submit', function (ev) {
+        ev.preventDefault();
+        var tenant = $.trim($('#regTenant').val()) || 'default';
+        var name = $.trim($('#regName').val());
+        var email = $.trim($('#regEmail').val());
+        var pass = $('#regPassword').val();
+
+        $('#regNameErr, #regEmailErr, #regPassErr').hide();
+        var ok = true;
+        if (name.length < 2) {
+          $('#regNameErr').show();
+          ok = false;
+        }
+        if (!validateEmail(email)) {
+          $('#regEmailErr').show();
+          ok = false;
+        }
+        if (!pass || pass.length < 8) {
+          $('#regPassErr').show();
+          ok = false;
+        }
+        if (!ok) return;
+
+        showLoading(true);
+        $.ajax({
+          url: apiRegister,
+          method: 'POST',
+          contentType: 'application/json; charset=UTF-8',
+          dataType: 'json',
+          data: JSON.stringify({
+            tenant_id: tenant,
+            name: name,
+            email: email,
+            password: pass
+          }),
+          success: function (res) {
+            showLoading(false);
+            if (res && res.success) {
+              showToast(res.message || 'Registered. You can sign in now.', 'success');
+              setMode(false);
+              $('#loginEmail').val(email);
+              $('#loginTenant').val(tenant);
+            } else {
+              showToast((res && res.message) || 'Registration failed.', 'error');
+            }
+          },
+          error: function (xhr) {
+            showLoading(false);
+            var msg = 'Registration error.';
+            try {
+              var j = xhr.responseJSON || JSON.parse(xhr.responseText);
+              if (j && j.message) msg = j.message;
+            } catch (e) {}
+            showToast(msg, 'error');
+          }
+        });
+      });
+    })(jQuery);
+  </script>
+</body>
+</html>

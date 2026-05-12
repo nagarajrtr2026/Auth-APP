@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MT Auth — Multi-Tenant Authentication</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --bg0: #070b14;
+      --bg1: #0f172a;
+      --accent: #38bdf8;
+      --accent2: #a78bfa;
+      --glass: rgba(255, 255, 255, 0.06);
+      --border: rgba(255, 255, 255, 0.12);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      color: var(--text);
+      background: radial-gradient(1200px 800px at 10% 10%, #1e1b4b 0%, transparent 55%),
+                  radial-gradient(900px 600px at 90% 20%, #0c4a6e 0%, transparent 50%),
+                  linear-gradient(160deg, var(--bg0), var(--bg1));
+      overflow-x: hidden;
+    }
+    .cursor-glow {
+      position: fixed;
+      width: 420px;
+      height: 420px;
+      border-radius: 50%;
+      pointer-events: none;
+      background: radial-gradient(circle, rgba(56, 189, 248, 0.22), transparent 65%);
+      transform: translate(-50%, -50%);
+      z-index: 0;
+      transition: opacity 0.4s ease;
+    }
+    .hero-wrap {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+    .glass-panel {
+      max-width: 720px;
+      width: 100%;
+      padding: 3rem 2.5rem;
+      border-radius: 28px;
+      background: var(--glass);
+      border: 1px solid var(--border);
+      box-shadow: 0 25px 80px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      backdrop-filter: blur(18px) saturate(140%);
+      -webkit-backdrop-filter: blur(18px) saturate(140%);
+      transform-style: preserve-3d;
+      animation: floatIn 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+    @keyframes floatIn {
+      from { opacity: 0; transform: translateY(28px) rotateX(8deg); }
+      to { opacity: 1; transform: translateY(0) rotateX(0); }
+    }
+    .badge-soft {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.35rem 0.85rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.5);
+    }
+    h1 {
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin: 1rem 0 0.75rem;
+      font-size: clamp(2rem, 4vw, 2.75rem);
+      background: linear-gradient(120deg, #f8fafc, #cbd5e1 40%, var(--accent));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    p.lead {
+      color: var(--muted);
+      font-size: 1.05rem;
+      line-height: 1.65;
+      margin-bottom: 2rem;
+    }
+    .btn-glow {
+      border: none;
+      border-radius: 14px;
+      padding: 0.85rem 1.5rem;
+      font-weight: 600;
+      color: #0f172a;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      box-shadow: 0 12px 40px rgba(56, 189, 248, 0.35);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .btn-glow:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 16px 50px rgba(167, 139, 250, 0.4);
+      color: #0f172a;
+    }
+    .btn-outline-ghost {
+      border-radius: 14px;
+      padding: 0.85rem 1.5rem;
+      font-weight: 600;
+      color: var(--text);
+      border: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.4);
+      transition: border-color 0.2s ease, background 0.2s ease;
+    }
+    .btn-outline-ghost:hover {
+      border-color: rgba(56, 189, 248, 0.5);
+      background: rgba(30, 41, 59, 0.7);
+      color: var(--text);
+    }
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+    .feat {
+      padding: 1rem 1.1rem;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.35);
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+    .feat strong { color: var(--text); display: block; margin-bottom: 0.25rem; }
+    .page-trans { animation: pageTrans 0.5s ease both; }
+    @keyframes pageTrans {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="page-trans">
+  <div class="cursor-glow" id="cursorGlow" aria-hidden="true"></div>
+  <div class="hero-wrap">
+    <div class="glass-panel text-center text-md-start">
+      <span class="badge-soft">Internship project</span>
+      <h1>Multi-Tenant User Authentication</h1>
+      <p class="lead mb-0">
+        Secure stack: PHP APIs with MySQL credentials, MongoDB profiles, and Redis-backed tokens.
+        Glass UI, smooth motion, and a guided flow — register, sign in, then manage your profile.
+      </p>
+      <div class="d-flex flex-column flex-sm-row gap-3 mt-4 justify-content-center justify-content-md-start">
+        <a href="login.html" class="btn btn-glow text-decoration-none">Go to Login</a>
+        <a href="register.html" class="btn btn-outline-ghost text-decoration-none">Register</a>
+        <a href="profile.html" class="btn btn-outline-ghost text-decoration-none">Profile</a>
+      </div>
+      <div class="features text-start">
+        <div class="feat"><strong>MySQL</strong> Users &amp; passwords (hashed)</div>
+        <div class="feat"><strong>MongoDB</strong> Extended profile fields</div>
+        <div class="feat"><strong>Redis</strong> Session tokens</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script>
+    // Cursor-following gradient spotlight for landing parity with auth pages
+    (function () {
+      var el = document.getElementById('cursorGlow');
+      document.addEventListener('mousemove', function (e) {
+        el.style.left = e.clientX + 'px';
+        el.style.top = e.clientY + 'px';
+      });
+    })();
+  </script>
+</body>
+</html>

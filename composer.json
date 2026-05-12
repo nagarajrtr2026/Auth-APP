@@ -1,0 +1,14 @@
+{
+    "name": "admin/pro5",
+    "authors": [
+        {
+            "name": "Nagaraj M",
+            "email": "nagarajrtr128@gmail.com"
+        }
+    ],
+    "require": {
+        "mongodb/mongodb": "^2.3",
+        "firebase/php-jwt": "^7.0",
+        "predis/predis": "^3.4"
+    }
+}

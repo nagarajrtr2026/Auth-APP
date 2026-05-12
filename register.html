@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register — MT Auth</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --bg0: #030712;
+      --bg1: #0f172a;
+      --accent: #22d3ee;
+      --accent2: #c084fc;
+      --glass: rgba(255, 255, 255, 0.06);
+      --border: rgba(255, 255, 255, 0.14);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: radial-gradient(900px 600px at 80% 0%, #4c1d95 0%, transparent 55%),
+                  radial-gradient(700px 500px at 0% 80%, #155e75 0%, transparent 55%),
+                  linear-gradient(155deg, var(--bg0), var(--bg1));
+      overflow-x: hidden;
+    }
+    .cursor-glow {
+      position: fixed;
+      width: 440px;
+      height: 440px;
+      border-radius: 50%;
+      pointer-events: none;
+      background: radial-gradient(circle, rgba(34, 211, 238, 0.22), transparent 68%);
+      transform: translate(-50%, -50%);
+      z-index: 0;
+      mix-blend-mode: screen;
+    }
+    .wrap {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+    .card-3d {
+      width: min(100%, 460px);
+      border-radius: 26px;
+      padding: 2px;
+      background: linear-gradient(125deg, rgba(34, 211, 238, 0.55), rgba(192, 132, 252, 0.35), rgba(56, 189, 248, 0.25));
+      box-shadow: 0 28px 90px rgba(0, 0, 0, 0.55);
+      animation: rise 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
+      transform-style: preserve-3d;
+    }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(24px) rotateX(8deg); }
+      to { opacity: 1; transform: translateY(0) rotateX(0); }
+    }
+    .card-inner {
+      border-radius: 24px;
+      padding: 2rem 2rem 2.25rem;
+      background: rgba(15, 23, 42, 0.62);
+      border: 1px solid var(--border);
+      backdrop-filter: blur(22px) saturate(160%);
+      -webkit-backdrop-filter: blur(22px) saturate(160%);
+    }
+    h1 {
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      font-size: 1.55rem;
+      margin-bottom: 0.35rem;
+      background: linear-gradient(120deg, #f8fafc, #bae6fd);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .sub { color: var(--muted); font-size: 0.92rem; margin-bottom: 1.5rem; }
+    .form-label {
+      font-size: 0.78rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .form-control {
+      border-radius: 12px;
+      background: rgba(2, 6, 23, 0.55) !important;
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      color: var(--text) !important;
+    }
+    .form-control:focus {
+      border-color: rgba(34, 211, 238, 0.65);
+      box-shadow: 0 0 0 0.15rem rgba(34, 211, 238, 0.18);
+    }
+    .btn-main {
+      border: none;
+      border-radius: 14px;
+      padding: 0.75rem 1rem;
+      font-weight: 600;
+      width: 100%;
+      color: #0f172a;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      box-shadow: 0 14px 45px rgba(34, 211, 238, 0.35);
+      transition: transform 0.2s ease;
+    }
+    .btn-main:hover { transform: translateY(-2px); color: #0f172a; }
+    .links { text-align: center; margin-top: 1rem; }
+    .links a {
+      color: var(--muted);
+      font-size: 0.9rem;
+      text-decoration: none;
+      margin: 0 0.35rem;
+    }
+    .links a:hover { color: var(--accent); }
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 2000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(2, 6, 23, 0.62);
+      backdrop-filter: blur(4px);
+    }
+    .loading-overlay.show { display: flex; }
+    .spinner-ring {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: 3px solid rgba(148, 163, 184, 0.25);
+      border-top-color: var(--accent);
+      animation: spin 0.75s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .toast-host {
+      position: fixed;
+      bottom: 1rem;
+      right: 1rem;
+      z-index: 2100;
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+      max-width: min(400px, calc(100vw - 2rem));
+    }
+    .toast-custom {
+      padding: 0.8rem 1rem;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.94);
+      box-shadow: 0 16px 45px rgba(0, 0, 0, 0.45);
+      animation: tIn 0.35s ease both;
+      font-size: 0.9rem;
+    }
+    .toast-custom.ok { border-color: rgba(74, 222, 128, 0.45); }
+    .toast-custom.bad { border-color: rgba(248, 113, 113, 0.45); }
+    @keyframes tIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .shake { animation: shake 0.45s ease; }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-6px); }
+      50% { transform: translateX(6px); }
+      75% { transform: translateX(-4px); }
+    }
+    .page-in { animation: pin 0.55s ease both; }
+    @keyframes pin {
+      from { opacity: 0; transform: translateY(14px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .invalid-hint { font-size: 0.78rem; color: #fca5a5; margin-top: 0.2rem; display: none; }
+  </style>
+</head>
+<body class="page-in">
+  <div class="cursor-glow" id="cursorGlow"></div>
+  <div class="loading-overlay" id="loadingOverlay"><div class="spinner-ring"></div></div>
+  <div class="toast-host" id="toastHost"></div>
+
+  <div class="wrap">
+    <div class="card-3d">
+      <div class="card-inner">
+        <h1>Create account</h1>
+        <p class="sub">Join a tenant workspace. Credentials live in MySQL; profile fields in MongoDB.</p>
+        <form id="regForm" novalidate>
+          <div class="mb-2">
+            <label class="form-label" for="tenant">Tenant ID</label>
+            <input class="form-control" id="tenant" type="text" value="default" placeholder="default">
+          </div>
+          <div class="mb-2">
+            <label class="form-label" for="name">Full name</label>
+            <input class="form-control" id="name" type="text" required minlength="2" placeholder="Your name">
+            <div class="invalid-hint" id="nameErr">Enter your name.</div>
+          </div>
+          <div class="mb-2">
+            <label class="form-label" for="email">Email</label>
+            <input class="form-control" id="email" type="email" required placeholder="you@company.com">
+            <div class="invalid-hint" id="emailErr">Valid email required.</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="password">Password</label>
+            <input class="form-control" id="password" type="password" required minlength="8" placeholder="Minimum 8 characters">
+            <div class="invalid-hint" id="passErr">Use at least 8 characters.</div>
+          </div>
+          <button type="submit" class="btn-main">Register</button>
+        </form>
+        <div class="links">
+          <a href="login.html">Already have an account?</a>
+          <a href="index.html">Home</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script>
+    /**
+     * Dedicated register page — AJAX to register.php (jQuery only).
+     */
+    (function ($) {
+      var api = 'php/register.php';
+
+      $('#cursorGlow').each(function () {
+        var el = this;
+        $(document).on('mousemove', function (e) {
+          el.style.left = e.clientX + 'px';
+          el.style.top = e.clientY + 'px';
+        });
+      });
+
+      function toast(msg, ok) {
+        var cls = ok ? 'ok' : 'bad';
+        var $t = $('<div class="toast-custom ' + cls + '"></div>').text(msg);
+        $('#toastHost').append($t);
+        setTimeout(function () { $t.fadeOut(280, function () { $(this).remove(); }); }, 4000);
+      }
+
+      function loading(on) {
+        $('#loadingOverlay').toggleClass('show', !!on);
+      }
+
+      function validateEmail(v) {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+      }
+
+      $('#regForm').on('submit', function (e) {
+        e.preventDefault();
+        var tenant = $.trim($('#tenant').val()) || 'default';
+        var name = $.trim($('#name').val());
+        var email = $.trim($('#email').val());
+        var password = $('#password').val();
+
+        $('#nameErr, #emailErr, #passErr').hide();
+        var ok = true;
+        if (name.length < 2) {
+          $('#nameErr').show();
+          ok = false;
+        }
+        if (!validateEmail(email)) {
+          $('#emailErr').show();
+          ok = false;
+        }
+        if (!password || password.length < 8) {
+          $('#passErr').show();
+          ok = false;
+        }
+        if (!ok) {
+          $('.card-3d').addClass('shake');
+          setTimeout(function () { $('.card-3d').removeClass('shake'); }, 500);
+          return;
+        }
+
+        loading(true);
+        $.ajax({
+          url: api,
+          method: 'POST',
+          contentType: 'application/json; charset=UTF-8',
+          dataType: 'json',
+          data: JSON.stringify({
+            tenant_id: tenant,
+            name: name,
+            email: email,
+            password: password
+          }),
+          success: function (res) {
+            loading(false);
+            if (res && res.success) {
+              toast(res.message || 'Success. Redirecting to login…', true);
+              setTimeout(function () {
+                window.location.href = 'login.html';
+              }, 900);
+            } else {
+              toast((res && res.message) || 'Registration failed.', false);
+            }
+          },
+          error: function (xhr) {
+            loading(false);
+            var msg = 'Could not register.';
+            try {
+              var j = xhr.responseJSON || JSON.parse(xhr.responseText);
+              if (j && j.message) msg = j.message;
+            } catch (err) {}
+            toast(msg, false);
+          }
+        });
+      });
+    })(jQuery);
+  </script>
+</body>
+</html>
