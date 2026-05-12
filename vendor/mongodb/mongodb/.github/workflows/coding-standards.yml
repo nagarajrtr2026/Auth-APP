@@ -1,0 +1,52 @@
+name: "Coding Standards"
+
+on:
+  merge_group:
+  pull_request:
+    branches:
+      - "v*.*"
+      - "feature/*"
+  push:
+    branches:
+      - "v*.*"
+      - "feature/*"
+
+env:
+  PHP_VERSION: "8.2"
+  DRIVER_VERSION: "stable"
+
+jobs:
+  phpcs:
+    name: "phpcs"
+    runs-on: "ubuntu-24.04"
+
+    steps:
+      - name: "Checkout"
+        uses: "actions/checkout@v6"
+
+      - name: "Setup"
+        uses: "./.github/actions/setup"
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          driver-version: ${{ env.DRIVER_VERSION }}
+
+      # The -q option is required until phpcs v4 is released
+      - name: "Run PHP_CodeSniffer"
+        run: "vendor/bin/phpcs -q --no-colors --report=checkstyle | cs2pr"
+
+  rector:
+    name: "Rector"
+    runs-on: "ubuntu-24.04"
+
+    steps:
+      - name: "Checkout"
+        uses: "actions/checkout@v6"
+
+      - name: "Setup"
+        uses: "./.github/actions/setup"
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          driver-version: ${{ env.DRIVER_VERSION }}
+
+      - name: "Run Rector"
+        run: "vendor/bin/rector --ansi --dry-run"

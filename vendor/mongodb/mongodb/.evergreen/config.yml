@@ -1,0 +1,75 @@
+# When a task that used to pass starts to fail, go through all versions that may have been skipped to detect when the
+# task started failing.
+stepback: true
+
+# Mark a failure as a system/bootstrap failure (purple box) rather than a task failure by default.
+# Actual testing tasks are marked with `type: test`
+command_type: system
+
+# Fail builds when pre tasks fail.
+pre_error_fails_task: true
+
+# Protect ourselves against rogue test case that runs forever. Tasks are killed after 30 minutes, which shouldn't occur
+# under normal circumstances.
+exec_timeout_secs: 1800
+
+# These pre and post rules apply to all tasks not part of a task group, which should only ever be tests against local
+# MongoDB instances. All other tasks that require special preparation should be run from within a task group
+pre:
+  - func: "fetch source"
+  - func: "prepare resources"
+  - func: "fix absolute paths"
+  - func: "install dependencies"
+  - func: "locate PHP binaries"
+  - func: "fetch extension"
+  - func: "install composer"
+post:
+  - func: "upload test results"
+  - func: "stop load balancer"
+  - func: "stop mongo-orchestration"
+  - func: "cleanup"
+
+# These aliases define the default variant/tasks to test for pull requests and merge queue
+github_pr_aliases: &github_pr_aliases
+  # Always test all builds for consistency
+  - variant_tags: ["pr build"]
+    task_tags: ["pr"]
+  # Run all tasks in PR variants for PHP 8.3 (excluding MongoDB latest)
+  - variant_tags: ["pr php8.3"]
+    task_tags: ["pr !latest"]
+  # Run PR tasks for all PR variants (only MongoDB 7.0)
+  - variant_tags: ["pr"]
+    task_tags: ["pr 7.0"]
+
+commit_queue_aliases: *github_pr_aliases
+
+git_tag_aliases:
+  - git_tag: "^[0-9]+.[0-9]+.[0-9]+"
+    remote_path: ""
+    variant_tags: ["tag"]
+    task_tags: ["tag !latest"]
+
+github_checks_aliases:
+  - variant: ".*"
+    task: ".*"
+
+# Include files that contain various tasks, task groups, and build variant definitions
+include:
+  - filename: .evergreen/config/functions.yml
+
+  - filename: .evergreen/config/build-task-groups.yml
+  - filename: .evergreen/config/build-variants.yml
+
+  - filename: .evergreen/config/test-tasks.yml
+  - filename: .evergreen/config/test-task-groups.yml
+  - filename: .evergreen/config/test-variants.yml
+
+  # Automatically generated files
+  - filename: .evergreen/config/generated/build/build-extension.yml
+  - filename: .evergreen/config/generated/test/local.yml
+  - filename: .evergreen/config/generated/test/load-balanced.yml
+  - filename: .evergreen/config/generated/test/require-api-version.yml
+  - filename: .evergreen/config/generated/test/csfle.yml
+  - filename: .evergreen/config/generated/test-variant/modern-php-full.yml
+  - filename: .evergreen/config/generated/test-variant/phpc.yml
+  - filename: .evergreen/config/generated/test-variant/lowest.yml

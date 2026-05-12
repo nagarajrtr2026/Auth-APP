@@ -1,0 +1,38 @@
+  - name: "build-php-%phpVersion%"
+    tags: ["build", "php%phpVersion%", "stable", "pr", "tag"]
+    commands:
+      - func: "locate PHP binaries"
+        vars:
+          PHP_VERSION: "%phpVersion%"
+      - func: "compile extension"
+      - func: "upload extension"
+  - name: "build-php-%phpVersion%-lowest"
+    tags: ["build", "php%phpVersion%", "lowest", "pr", "tag"]
+    commands:
+      - func: "locate PHP binaries"
+        vars:
+          PHP_VERSION: "%phpVersion%"
+      - func: "compile extension"
+        vars:
+          EXTENSION_VERSION: "2.3.0"
+      - func: "upload extension"
+  - name: "build-php-%phpVersion%-next-stable"
+    tags: ["build", "php%phpVersion%", "next-stable", "pr", "tag"]
+    commands:
+      - func: "locate PHP binaries"
+        vars:
+          PHP_VERSION: "%phpVersion%"
+      - func: "compile extension"
+        vars:
+          EXTENSION_BRANCH: "v2.3"
+      - func: "upload extension"
+  - name: "build-php-%phpVersion%-next-minor"
+    tags: ["build", "php%phpVersion%", "next-minor"]
+    commands:
+      - func: "locate PHP binaries"
+        vars:
+          PHP_VERSION: "%phpVersion%"
+      - func: "compile extension"
+        vars:
+          EXTENSION_BRANCH: "v2.x"
+      - func: "upload extension"

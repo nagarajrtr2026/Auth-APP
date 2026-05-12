@@ -1,0 +1,57 @@
+name: Setup
+description: Sets up the build environment
+inputs:
+  php-version:
+    description: "PHP version to install"
+    required: true
+  driver-version:
+    description: "MongoDB extension version to install"
+    required: true
+  php-ini-values:
+    description: "INI values to pass along to setup-php action"
+    required: false
+    default: ""
+  working-directory:
+    description: "The directory where composer.json is located, if it is not in the repository root."
+    required: false
+  ignore-platform-req:
+    description: "Whether to ignore platform requirements when installing dependencies with Composer."
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: Setup cache environment
+      id: extcache
+      uses: shivammathur/cache-extensions@v1
+      with:
+        php-version: ${{ inputs.php-version }}
+        extensions: "mongodb-${{ inputs.driver-version }}"
+        key: "extcache-${{ inputs.driver-version }}"
+
+    - name: Cache extensions
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.extcache.outputs.dir }}
+        key: ${{ steps.extcache.outputs.key }}
+        restore-keys: ${{ steps.extcache.outputs.key }}
+
+    - name: Install PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        coverage: xdebug
+        extensions: "mongodb-${{ inputs.driver-version }}"
+        php-version: "${{ inputs.php-version }}"
+        tools: cs2pr
+        ini-values: "${{ inputs.php-ini-values }}"
+
+    - name: Show driver information
+      run: "php --ri mongodb"
+      shell: bash
+
+    - name: Install dependencies with Composer
+      uses: ramsey/composer-install@3.0.0
+      with:
+        composer-options: "--no-suggest ${{ inputs.ignore-platform-req == 'true' && '--ignore-platform-req=php+' || '' }}"
+        working-directory: "${{ inputs.working-directory }}"

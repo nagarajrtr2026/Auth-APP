@@ -1,5 +1,5 @@
-# Composer
-/vendor/
+# Composer — vendor/ is tracked in this repo (clone without `composer install` if desired).
+# To ignore vendor again, uncomment: /vendor/
 
 # Environment & secrets
 .env
